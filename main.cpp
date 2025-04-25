@@ -64,12 +64,15 @@ int main()
 	//for (int i = result.size() - 1; i >= 0; i--)
 	//	std::cout << result[i] << " ";
 
-	std::string array1 = "12143125231654236346436537347437476354";
+	std::string array1 = "12143125231654236346436537347437473234";
 	std::string array2 = "12345678901234567890263643574574753746";
-	std::string array3 = "0";
+	std::string array3 = "2";
 
-	std::string result = substract(array2, array1);
-	std::cout << array2 << " - " << array1 << " = ";
+	std::string array4 = "10012";
+	std::string array5 = "5";
+
+	std::string result = modulo(array4, array5);
+	std::cout << array4 << " mod " << array5 << " = ";
 	for (int i = 0; i < result.size(); i++)
 		std::cout << result[i];
 }
