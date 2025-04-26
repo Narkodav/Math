@@ -21,7 +21,16 @@
     <ClInclude Include="BigInt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VectorArithmetic.h">
+    <ClInclude Include="BigNumArithmetic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BigUint.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BigFloat.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -33,6 +42,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="BigInt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BigUint.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BigFloat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

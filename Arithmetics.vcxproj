@@ -131,12 +131,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BigFloat.h" />
     <ClInclude Include="BigInt.h" />
+    <ClInclude Include="BigNumArithmetic.h" />
+    <ClInclude Include="BigUint.h" />
     <ClInclude Include="Common.h" />
-    <ClInclude Include="VectorArithmetic.h" />
+    <ClInclude Include="Math.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BigFloat.cpp" />
     <ClCompile Include="BigInt.cpp" />
+    <ClCompile Include="BigUint.cpp" />
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
