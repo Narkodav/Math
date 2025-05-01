@@ -18,19 +18,25 @@
     <ClInclude Include="Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BigInt.h">
+    <ClInclude Include="BigNum\BigInt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BigNumArithmetic.h">
+    <ClInclude Include="BigNum\BigNumArithmetic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BigUint.h">
+    <ClInclude Include="BigNum\BigUint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BigFloat.h">
+    <ClInclude Include="BigNum\BigFloat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Math.h">
+    <ClInclude Include="BigNum\Math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Tensor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BigNum\BigFloatArithmetic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -41,13 +47,16 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BigInt.cpp">
+    <ClCompile Include="BigNum\BigInt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BigUint.cpp">
+    <ClCompile Include="BigNum\BigUint.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BigFloat.cpp">
+    <ClCompile Include="BigNum\BigFloat.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Tensor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

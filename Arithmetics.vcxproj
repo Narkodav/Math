@@ -131,19 +131,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="BigFloat.h" />
-    <ClInclude Include="BigInt.h" />
-    <ClInclude Include="BigNumArithmetic.h" />
-    <ClInclude Include="BigUint.h" />
+    <ClInclude Include="BigNum\BigFloat.h" />
+    <ClInclude Include="BigNum\BigFloatArithmetic.h" />
+    <ClInclude Include="BigNum\BigInt.h" />
+    <ClInclude Include="BigNum\BigNumArithmetic.h" />
+    <ClInclude Include="BigNum\BigUint.h" />
     <ClInclude Include="Common.h" />
-    <ClInclude Include="Math.h" />
+    <ClInclude Include="BigNum\Math.h" />
+    <ClInclude Include="Tensor.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BigFloat.cpp" />
-    <ClCompile Include="BigInt.cpp" />
-    <ClCompile Include="BigUint.cpp" />
+    <ClCompile Include="BigNum\BigFloat.cpp" />
+    <ClCompile Include="BigNum\BigInt.cpp" />
+    <ClCompile Include="BigNum\BigUint.cpp" />
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Tensor.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

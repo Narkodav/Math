@@ -360,37 +360,6 @@ std::vector<T> modulo(const std::vector<T>& x, const std::vector<T>& y) {
 	return remainder;
 }
 
-//template<typename T>
-//	requires std::is_unsigned_v<T>
-//std::vector<T> power(const std::vector<T>& base, const std::vector<T>& exponent) {
-//
-//	std::vector<T> result(base.size(), 1);
-//	std::vector<T> current_power = base;
-//	std::vector<T> exp = exponent;
-//
-//	// Continue while any exponent is non-zero
-//	while (std::any_of(exp.begin(), exp.end(), [](T e) { return e != 0; })) {
-//		// For each element where current bit is 1, multiply result by current_power
-//		for (size_t i = 0; i < exp.size(); i++) {
-//			if (exp[i] & 1) {  // Check if odd
-//				result[i] *= current_power[i];
-//			}
-//		}
-//
-//		// Square current_power for next iteration
-//		for (size_t i = 0; i < current_power.size(); i++) {
-//			current_power[i] *= current_power[i];
-//		}
-//
-//		// Shift right all exponents (divide by 2)
-//		for (size_t i = 0; i < exp.size(); i++) {
-//			exp[i] >>= 1;
-//		}
-//	}
-//
-//	return result;
-//}
-
 template<typename T>
 	requires std::is_unsigned_v<T>
 std::vector<T> stringToBigInt(const std::string& str) {
