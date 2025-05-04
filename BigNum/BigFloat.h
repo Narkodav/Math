@@ -16,9 +16,12 @@ public:
 	static inline const float divisionPrecisionScale = 1.618;
 	static inline const float divisionPrecisionAddition = 4 * STORAGE_SIZE; //2 limbs
 	static inline const float additionalPrecision = 4 * STORAGE_SIZE; //4 limbs
-	static inline const float decimalFormatPrescision = 10; //display 10 digits after the decimal
+	
 	static inline const double logBase_10 = std::log(10.0) / std::log(static_cast<double>(base));
 	static inline const double log10_base = std::log(static_cast<double>(base)) / std::log(10.0);
+
+	static inline const size_t repeatingDigitCutoffLimit = 10; //how many repeating digits needs to happen for a cutoff
+	static inline const size_t decimalFormatPrescision = 20; //display 20 digits of significant
 
 private:
 	BigInt m_mantissa;
@@ -303,7 +306,13 @@ private:
 		}
 	}
 
-	static void formatStringOutput(std::string& str, size_t decimalPrecision);
+	void fillFraction(std::string& str, BigInt& fraction) const;
+
+	static void formatStringOutput(std::string& str,
+		size_t decimalPrecision, size_t cutoffLimit, size_t decimalPosition);
+
+	static void cutoffRepeatingPatterns(std::string& strRaw,
+		size_t decimalPrecision, size_t cutoffLimit, int64_t& exponent);
 };
 
 inline BigFloat operator""_bf(const char* str) {

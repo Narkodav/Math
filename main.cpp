@@ -91,22 +91,30 @@ int main()
 	//BigFloat f1 = 1200.43_bf;
 	//BigFloat f2 = 600.323_bf;
 
-	BigFloat f1 = 3_bf;
-	BigFloat f2 = 2_bf;
+	BigFloat f1 = 2.26543263470000000009345_bf;
+	BigFloat f2 = 22154235614326346.3275325275_bf;
+	BigFloat f3 = 0.000346536_bf;
+	BigFloat f4 = 0.0000000000000000000000000346536_bf;
 
 	//BigFloat f1 = 2_bf;
 	//BigFloat f2 = 2_bf;
 
-	float f3 = 2;
-	float f4 = 2;
+	float f5 = 2.26543263470000000009345;
+	float f6 = 22154235614326346.3275325275;
+	float f7 = 0.000346536;
+	float f8 = 0.0000000000000000000000000346536;
 	//f1.ceiling();
 	//f2.floor();
 
-	std::cout << f1 << " * ";
-	std::cout << f2 << " = ";
-	std::cout << f1 * f2 << std::endl;
-	std::cout << f3 * f4 << std::endl;
-
+	std::cout << f1 << std::endl;
+	std::cout << f2 << std::endl;
+	std::cout << f3 << std::endl;
+	std::cout << f4 << std::endl;
+	std::cout << std::endl;	
+	std::cout << f5 << std::endl;
+	std::cout << f6 << std::endl;
+	std::cout << f7 << std::endl;
+	std::cout << f8 << std::endl;
 	//std::cout << f1 << " /" << std::endl << std::endl;
 	//std::cout << f2 << " =" << std::endl << std::endl;
 	//std::cout << (f1 / f2) << std::endl << std::endl;
