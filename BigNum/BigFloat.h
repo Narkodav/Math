@@ -1,6 +1,9 @@
-#pragma once
+﻿#pragma once
 #include <cmath>
+#include <cassert>
+
 #include "BigInt.h"
+#include "BigFloatArithmetic.h"
 
 class BigFloat
 {
@@ -11,8 +14,9 @@ public:
 	// the scale by which the mantissa is expanded during division
 	// can be adjusted depending on desired precision or performance
 	static inline const float divisionPrecisionScale = 1.618;
-	static inline const float divisionPrecisionAddition = 10;
+	static inline const float divisionPrecisionAddition = 4 * STORAGE_SIZE; //2 limbs
 	static inline const float additionalPrecision = 4 * STORAGE_SIZE; //4 limbs
+	static inline const float decimalFormatPrescision = 10; //display 10 digits after the decimal
 	static inline const double logBase_10 = std::log(10.0) / std::log(static_cast<double>(base));
 	static inline const double log10_base = std::log(static_cast<double>(base)) / std::log(10.0);
 
@@ -20,44 +24,103 @@ private:
 	BigInt m_mantissa;
 	int64_t m_exponent = 0;
 
-	BigFloat(BigInt&& mantissa, StorageType exponent) : m_mantissa(std::move(mantissa)), m_exponent(exponent) {
-		size_t leadingZeros = 0;
-		while (leadingZeros < m_mantissa.m_num.size() && m_mantissa.m_num[leadingZeros] == 0) {
-			leadingZeros++;
-		}
+	//BigFloat(std::vector<StorageType>&& mantissa, bool sign, StorageType exponent) : 
+	//	m_mantissa(std::move(mantissa), sign), m_exponent(exponent) {
+	//	clearTailingZeros();
+	//};
 
-		if (leadingZeros > 0) {
-			m_mantissa.m_num.raw().erase(m_mantissa.m_num.raw().begin(), m_mantissa.m_num.raw().begin() + leadingZeros);
-		}
-		m_exponent += leadingZeros * STORAGE_SIZE;
+	BigFloat(BigInt&& mantissa, StorageType exponent) : m_mantissa(std::move(mantissa)), m_exponent(exponent) {
+		clearTailingZeros();
 	};
 
 public:
 	BigFloat() : m_mantissa(0), m_exponent(0) {};
 
-	BigFloat(const char* str) {
+	BigFloat(const std::string& str) {
 		initFromString(str);
 	};
+
+	BigFloat(BigFloat&&) = default;
+	BigFloat(const BigFloat&) = default;
+
+	BigFloat& operator=(BigFloat&&) = default;
+	BigFloat& operator=(const BigFloat&) = default;
+
+	BigFloat(BigInt&& other) {
+		m_mantissa = std::move(other);
+		m_exponent = m_mantissa.bitLength() - 1;
+		clearTailingZeros();
+	}
+	BigFloat(const BigInt& other)
+	{
+		m_mantissa = other;		
+		m_exponent = m_mantissa.bitLength() - 1;
+		clearTailingZeros();
+	}
+
+	BigFloat& operator=(BigInt&& other)
+	{
+		m_mantissa = std::move(other);
+		m_exponent = m_mantissa.bitLength() - 1;
+		clearTailingZeros();
+		return *this;
+	}
+
+	BigFloat& operator=(const BigInt& other)
+	{
+		m_mantissa = other;
+		m_exponent = m_mantissa.bitLength() - 1;
+		clearTailingZeros();
+		return *this;
+	}
 	
 	BigFloat operator+(const BigFloat& other) const
 	{
 		if (m_mantissa.isZero()) return other;
 		if (other.m_mantissa.isZero()) return *this;
 
-		if (m_exponent == other.m_exponent) {
-			return BigFloat(m_mantissa + other.m_mantissa, m_exponent);
-		}
+		size_t bitLengthThis = m_mantissa.bitLength();
+		size_t bitLengthOther = other.m_mantissa.bitLength();
 
-		// Align to the larger exponent
-		else if (m_exponent > other.m_exponent) {
-			BigInt shiftedMantissa = m_mantissa;
-			shiftedMantissa <<= (m_exponent - other.m_exponent);
-			return BigFloat(other.m_mantissa + shiftedMantissa, other.m_exponent);
+		if(bitLengthThis > bitLengthOther)
+		{
+			BigInt shiftedOther = other.m_mantissa << bitLengthThis - bitLengthOther;
+			if (m_exponent >= other.m_exponent)
+			{
+				size_t shift = m_exponent - other.m_exponent;
+				BigInt shiftedThis = m_mantissa << shift;
+				bitLengthThis += shift;
+				shiftedOther = shiftedThis + shiftedOther;
+				return BigFloat(std::move(shiftedOther), m_exponent + (int64_t)shiftedOther.bitLength() - (int64_t)bitLengthThis);
+			}
+			else
+			{
+				size_t shift = other.m_exponent - m_exponent;
+				shiftedOther = shiftedOther << shift;
+				bitLengthOther = bitLengthThis + shift;
+				shiftedOther = m_mantissa + shiftedOther;
+				return BigFloat(std::move(shiftedOther), other.m_exponent + (int64_t)shiftedOther.bitLength() - (int64_t)bitLengthOther);
+			}
 		}
-		else {
-			BigInt shiftedMantissa = other.m_mantissa;
-			shiftedMantissa <<= (other.m_exponent - m_exponent);
-			return BigFloat(m_mantissa + shiftedMantissa, m_exponent);
+		else
+		{
+			BigInt shiftedThis = m_mantissa << bitLengthOther - bitLengthThis;
+			if (m_exponent >= other.m_exponent)
+			{
+				size_t shift = m_exponent - other.m_exponent;
+				shiftedThis = shiftedThis << shift;
+				bitLengthThis = bitLengthOther + shift;
+				shiftedThis = shiftedThis + other.m_mantissa;
+				return BigFloat(std::move(shiftedThis), m_exponent + (int64_t)shiftedThis.bitLength() - (int64_t)bitLengthThis);
+			}
+			else
+			{
+				size_t shift = other.m_exponent - m_exponent;
+				BigInt shiftedOther = other.m_mantissa << shift;
+				bitLengthOther += shift;
+				shiftedThis = shiftedThis + shiftedOther;
+				return BigFloat(std::move(shiftedThis), other.m_exponent + (int64_t)shiftedThis.bitLength() - (int64_t)bitLengthOther);
+			}
 		}
 	}
 
@@ -69,30 +132,75 @@ public:
 
 	BigFloat operator-(const BigFloat& other) const
 	{
-		if (m_mantissa.isZero()) return -other;
+		if (m_mantissa.isZero()) return other;
 		if (other.m_mantissa.isZero()) return *this;
 
-		if (m_exponent == other.m_exponent) {
-			return BigFloat(m_mantissa - other.m_mantissa, m_exponent);
-		}
+		size_t bitLengthThis = m_mantissa.bitLength();
+		size_t bitLengthOther = other.m_mantissa.bitLength();
 
-		// Align to the larger exponent
-		else if (m_exponent > other.m_exponent) {
-			BigInt shiftedMantissa = other.m_mantissa;
-			shiftedMantissa <<= (m_exponent - other.m_exponent);
-			return BigFloat(m_mantissa - shiftedMantissa, m_exponent);
+		if (bitLengthThis > bitLengthOther)
+		{
+			BigInt shiftedOther = other.m_mantissa << bitLengthThis - bitLengthOther;
+			if (m_exponent >= other.m_exponent)
+			{
+				size_t shift = m_exponent - other.m_exponent;
+				BigInt shiftedThis = m_mantissa << shift;
+				bitLengthThis += shift;
+				shiftedOther = shiftedThis - shiftedOther;
+				return BigFloat(std::move(shiftedOther), m_exponent + (int64_t)shiftedOther.bitLength() - (int64_t)bitLengthThis);
+			}
+			else
+			{
+				size_t shift = other.m_exponent - m_exponent;
+				shiftedOther = shiftedOther << shift;
+				bitLengthOther = bitLengthThis + shift;
+				shiftedOther = m_mantissa - shiftedOther;
+				return BigFloat(std::move(shiftedOther), other.m_exponent + (int64_t)shiftedOther.bitLength() - (int64_t)bitLengthOther);
+			}
 		}
-		else {
-			BigInt shiftedMantissa = m_mantissa;
-			shiftedMantissa <<= (other.m_exponent - m_exponent);
-			return BigFloat(shiftedMantissa - other.m_mantissa, other.m_exponent);
+		else
+		{
+			BigInt shiftedThis = m_mantissa << bitLengthOther - bitLengthThis;
+			if (m_exponent >= other.m_exponent)
+			{
+				size_t shift = m_exponent - other.m_exponent;
+				shiftedThis = shiftedThis << shift;
+				bitLengthThis = bitLengthOther + shift;
+				shiftedThis = shiftedThis - other.m_mantissa;
+				return BigFloat(std::move(shiftedThis), m_exponent + (int64_t)shiftedThis.bitLength() - (int64_t)bitLengthThis);
+			}
+			else
+			{
+				size_t shift = other.m_exponent - m_exponent;
+				BigInt shiftedOther = other.m_mantissa << shift;
+				bitLengthOther += shift;
+				shiftedThis = shiftedThis - shiftedOther;
+				return BigFloat(std::move(shiftedThis), other.m_exponent + (int64_t)shiftedThis.bitLength() - (int64_t)bitLengthOther);
+			}
 		}
 	}
 
 	BigFloat operator*(const BigFloat& other) const
 	{
 		if (m_mantissa.isZero() || other.m_mantissa.isZero()) return BigFloat();
-		return BigFloat(m_mantissa * other.m_mantissa, m_exponent + other.m_exponent);
+		size_t bitLengthThis = m_mantissa.bitLength();
+		size_t bitLengthOther = other.m_mantissa.bitLength();
+		if (bitLengthThis >= bitLengthOther)
+		{
+			BigInt shiftedOther = other.m_mantissa << bitLengthThis - bitLengthOther;
+			BigInt result = m_mantissa * shiftedOther;
+			if (result.bitLength() == bitLengthThis + shiftedOther.bitLength())
+				return BigFloat(std::move(result), m_exponent + other.m_exponent + 1);
+			return BigFloat(std::move(result), m_exponent + other.m_exponent);
+		}
+		else
+		{
+			BigInt shiftedThis = m_mantissa << bitLengthOther - bitLengthThis;
+			BigInt result = shiftedThis * other.m_mantissa;
+			if (result.bitLength() == shiftedThis.bitLength() + bitLengthOther)
+				return BigFloat(std::move(result), m_exponent + other.m_exponent + 1);
+			return BigFloat(std::move(result), m_exponent + other.m_exponent);
+		}
 	}
 
 	BigFloat operator/(const BigFloat& other) const
@@ -100,67 +208,70 @@ public:
 		if (other.m_mantissa.isZero()) throw std::invalid_argument("Division by zero");
 		if (m_mantissa.isZero()) return BigFloat();
 
-		BigInt grownThisMantissa = m_mantissa;
-		BigInt grownOtherMantissa = other.m_mantissa;
+		size_t bitLengthThis = m_mantissa.bitLength();
+		size_t bitLengthOther = other.m_mantissa.bitLength();
+		BigInt shiftedThis;
+		if (bitLengthThis >= bitLengthOther)
+			shiftedThis = m_mantissa << divisionPrecisionAddition;
+		else shiftedThis = m_mantissa << bitLengthOther - bitLengthThis + divisionPrecisionAddition;
 
-		// Ensure dividend is larger if needed
-		if (m_mantissa.m_num.size() <= other.m_mantissa.m_num.size()) {
-			growMantissa(grownThisMantissa, (1 + other.m_mantissa.m_num.size() - m_mantissa.m_num.size()));
+		BigInt result = shiftedThis / other.m_mantissa;
+		if (result.bitLength() == shiftedThis.bitLength() - bitLengthOther)
+			return BigFloat(std::move(result), m_exponent - other.m_exponent - 1);
+		return BigFloat(std::move(result), m_exponent - other.m_exponent);
+	}
+
+	bool isRound()
+	{		
+		if (m_exponent < -1)
+			return m_mantissa.raw().size() == 0;
+
+		size_t fractionLength = m_mantissa.bitLength() - 1 - m_exponent;
+		for (size_t i = 0; i < fractionLength; ++i)
+		{
+			if (m_mantissa.raw()[i / STORAGE_SIZE] & (StorageType(1) << i % STORAGE_SIZE))
+				return false;
 		}
-
-		// Apply precision scaling
-		growMantissa(grownThisMantissa, divisionPrecisionAddition);
-		growMantissa(grownOtherMantissa, divisionPrecisionAddition);
-
-		int64_t grownThisExponent = m_exponent - (grownThisMantissa.m_num.size() - m_mantissa.m_num.size()) * STORAGE_SIZE;
-		int64_t grownOtherExponent = other.m_exponent - (grownOtherMantissa.m_num.size() - other.m_mantissa.m_num.size()) * STORAGE_SIZE;
-
-		return BigFloat(grownThisMantissa / grownOtherMantissa, grownThisExponent - grownOtherExponent);
+		return true;
 	}
 
 	void floor()
 	{
-		if (m_exponent < 0)
+		if (isRound())
+			return;
+
+		if (m_exponent >= 0)
 		{
-			m_mantissa >>= -m_exponent;
-			if(m_mantissa.m_sign == BigInt::NEGATIVE)
-				m_mantissa = m_mantissa + BigInt(1);
+			size_t bitLength = m_mantissa.bitLength();
+			m_mantissa >>= bitLength - 1 - m_exponent;
+			m_exponent = m_mantissa.bitLength() - 1;
+			if (m_mantissa.m_sign == BigInt::NEGATIVE)
+				*this = *this - BigFloat(1);
 		}
+		else m_mantissa = 0;
 	}
 
 	void ceiling()
 	{
-		if (m_exponent < 0)
-		{
-			size_t limit = std::max(-m_exponent / STORAGE_SIZE, m_mantissa.m_num.size() - 1);
-			for(size_t i = 0; i < limit; ++i)
-				if (m_mantissa.m_num[i] != 0)
-				{
-					m_mantissa >>= -m_exponent;
-					if (m_mantissa.m_sign == BigInt::POSITIVE)
-						m_mantissa = m_mantissa + BigInt(1);
-					return;
-				}
+		if (isRound())
+			return;
 
-			if (m_mantissa.m_num[limit] << (STORAGE_SIZE - (-m_exponent - limit * STORAGE_SIZE)) != 0)
-			{
-				m_mantissa >>= -m_exponent;
-				if (m_mantissa.m_sign == BigInt::POSITIVE)
-					m_mantissa = m_mantissa + BigInt(1);
-				return;
-			}
-			m_mantissa >>= -m_exponent;
+		if (m_exponent >= 0)
+		{
+			size_t bitLength = m_mantissa.bitLength();
+			m_mantissa >>= bitLength - 1 - m_exponent;
+			m_exponent = m_mantissa.bitLength() - 1;
+			if (m_mantissa.m_sign == BigInt::POSITIVE)
+				*this = *this + BigFloat(1);
 		}
+		else m_mantissa = 0;
 	}
 
 	BigFloat operator%(const BigFloat& other) const {
 		if (other.m_mantissa.isZero()) throw std::invalid_argument("Modulo by zero");
 		if (m_mantissa.isZero()) return BigFloat();
 
-		// First divide
 		BigFloat quotient = *this / other;
-
-		// Floor the quotient (remove fractional part)
 		quotient.floor();
 
 		return *this - (other * quotient);
@@ -189,8 +300,10 @@ private:
 				num.erase(num.begin(), num.begin() + i);
 				return;
 			}
-		}		
+		}
 	}
+
+	static void formatStringOutput(std::string& str, size_t decimalPrecision);
 };
 
 inline BigFloat operator""_bf(const char* str) {
@@ -203,7 +316,6 @@ std::ostream& operator<<(std::ostream& os, const BigFloat& num) {
 		os << "0";
 		return os;
 	}
-
 
 	std::string base10 = num.toString();
 	

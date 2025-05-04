@@ -71,7 +71,77 @@ void printExactFloat(float f) {
 
 int main()
 {
-	BigFloat f = 34260000.23524000000037644357348658497895764745756386475463457547643746743263426_bf;
+	//BigFloat f1 = -220.25_bf;
+	//BigFloat f2 = 34.53_bf;
+	//float f3 = -220.25;
+	//float f4 = 34.53;
+	//std::cout << f1 << " +" << std::endl << std::endl;;
+	//std::cout << f2 << " =" << std::endl << std::endl;;
+	//std::cout << (f2 + f1) << std::endl;
 
-	std::cout << f.toString() << std::endl;
+	//std::cout << std::endl;
+
+	//std::cout << f3 << " +" << std::endl << std::endl;;
+	//std::cout << f4 << " =" << std::endl << std::endl;;
+	//std::cout << (f3 + f4) << std::endl;
+
+	//BigFloat f1 = 1200.43_bf;
+	//BigFloat f2 = 0.000034_bf;
+	//
+	//BigFloat f1 = 1200.43_bf;
+	//BigFloat f2 = 600.323_bf;
+
+	BigFloat f1 = 3_bf;
+	BigFloat f2 = 2_bf;
+
+	//BigFloat f1 = 2_bf;
+	//BigFloat f2 = 2_bf;
+
+	float f3 = 2;
+	float f4 = 2;
+	//f1.ceiling();
+	//f2.floor();
+
+	std::cout << f1 << " * ";
+	std::cout << f2 << " = ";
+	std::cout << f1 * f2 << std::endl;
+	std::cout << f3 * f4 << std::endl;
+
+	//std::cout << f1 << " /" << std::endl << std::endl;
+	//std::cout << f2 << " =" << std::endl << std::endl;
+	//std::cout << (f1 / f2) << std::endl << std::endl;
+
+	//std::cout << std::endl;
+
+	//std::cout << f2 << " /" << std::endl << std::endl;
+	//std::cout << f1 << " =" << std::endl << std::endl;
+	//std::cout << (f2 / f1) << std::endl << std::endl;
+
+	//std::cout << std::endl;
+
+	//std::cout << f3 << " /" << std::endl;
+	//std::cout << f4 << " =" << std::endl;
+	//std::cout << (f3 / f4) << std::endl;
+
+	//std::cout << f4 << " /" << std::endl;
+	//std::cout << f3 << " =" << std::endl;
+	//std::cout << (f4 / f3) << std::endl;
+
+	//BigInt f1 = 800;
+	//BigInt f2 = 249;
+	//int f3 = 10000000;
+	//int f4 = 249;
+	//while (f1.bitLength() - f2.bitLength() == (f1 / f2).bitLength())
+	//{
+	//	f1 += 1;
+	//}
+	//std::cout << f1 << " " << f1.bitLength() << " *" << std::endl;
+	//std::cout << f2 << " " << f2.bitLength() << " =" << std::endl;
+	//std::cout << (f1 / f2) << (f1 / f2).bitLength() << std::endl;
+
+	//std::cout << std::endl;
+
+	//std::cout << f3 << " *" << std::endl;
+	//std::cout << f4 << " =" << std::endl;
+	//std::cout << (f3 / f4) << std::endl;
 }

@@ -270,7 +270,7 @@ std::vector<T> divide(const std::vector<T>& x, const std::vector<T>& y) {
 	if (res != CompareResult::GREATER)
 		return res == CompareResult::EQUAL ? std::vector<T>() : std::vector<T>{ 1 };
 
-	std::vector<T> quotient(y.size() + 1, 0);
+	std::vector<T> quotient(x.size() + 1, 0);
 	std::vector<T> remainder;
 
 	for (size_t i = x.size() - 1; i != std::numeric_limits<size_t>::max(); --i) {
@@ -283,7 +283,7 @@ std::vector<T> divide(const std::vector<T>& x, const std::vector<T>& y) {
 			T q_low = 0, q_high = std::numeric_limits<T>::max();
 			T q = 0;
 
-			while (q_low <= q_high) {
+			while (q_low < q_high) {
 				T q_mid = q_low + (q_high - q_low) / 2;
 				std::vector<T> product = multiply(y, { q_mid });
 
@@ -294,6 +294,9 @@ std::vector<T> divide(const std::vector<T>& x, const std::vector<T>& y) {
 					q_high = q_mid - 1;
 				}
 			}
+			if (q_low == q_high && compare(remainder, multiply(y, { q_high })) == CompareResult::LESS)
+				q_high = q_high - 1;
+
 			q = q_high;
 
 			if (q > 0) {
@@ -303,7 +306,7 @@ std::vector<T> divide(const std::vector<T>& x, const std::vector<T>& y) {
 		}
 	}
 
-	for (size_t i = x.size() - 1; i != std::numeric_limits<size_t>::max(); i--)
+	for (size_t i = quotient.size() - 1; i != std::numeric_limits<size_t>::max(); i--)
 	{
 		if (quotient[i] != 0)
 			break;

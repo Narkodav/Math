@@ -31,10 +31,13 @@ void BigFloat::initFromString(const std::string& str)
 	}
 
 	BigInt fraction(str.substr(start, str.size() - start));
-	BigInt nextBaseTen = power(BigInt(10), str.size() - decimal - 1);
+	BigInt nextBaseTen = power(10, str.size() - decimal - 1);
 
 	if(fraction == 0)
+	{
+		clearTailingZeros();
 		return;
+	}
 
 	size_t i = 0;
 	if (m_mantissa.raw().size() == 0)
@@ -48,7 +51,7 @@ void BigFloat::initFromString(const std::string& str)
 			{
 				m_mantissa.raw()[0] |= 1;
 				fraction -= nextBaseTen;
-				//++m_exponent;
+				++m_exponent;
 				break;
 			}
 		}
@@ -79,19 +82,14 @@ void BigFloat::initFromString(const std::string& str)
 std::string BigFloat::toString() const {
 	std::string result;
 
+	if (m_mantissa.m_sign == BigInt::NEGATIVE)
+		result = "-";
+
 	if (m_exponent >= 0)
 	{
-		size_t exponent = m_exponent;
-		BigInt mantissa = m_mantissa;
-		if (m_mantissa.bitLength() < m_exponent + 1)
-		{
-			mantissa = mantissa << (exponent + 1 - m_mantissa.bitLength());
-			exponent = mantissa.bitLength() - 1;
-		}
-
-		size_t coefficient = mantissa.bitLength() - exponent - 1;
-		BigInt integer = mantissa >> coefficient;
-		BigInt fraction = mantissa - (integer << coefficient);
+		size_t coefficient = m_mantissa.bitLength() - m_exponent - 1;
+		BigInt integer = m_mantissa >> coefficient;
+		BigInt fraction = m_mantissa - (integer << coefficient);
 
 		// Convert integer part to string
 		result += integer.toString();
@@ -133,12 +131,10 @@ std::string BigFloat::toString() const {
 	}
 	else //if exponent is negative there is no integer part
 	{
-		if (m_mantissa.m_sign == BigInt::NEGATIVE)
-			result += "-";
 		BigInt fraction = m_mantissa;
 
 		result += "0.";
-		size_t decimalPoint = m_mantissa.bitLength() - m_exponent - 1;
+		size_t decimalPoint = m_mantissa.bitLength() - m_exponent;
 		size_t decimalPointIndex = decimalPoint / STORAGE_SIZE;
 		size_t decimalPointBit = decimalPoint % STORAGE_SIZE;
 
@@ -170,7 +166,6 @@ std::string BigFloat::toString() const {
 			/*				std::cout << result << std::endl;	*/
 		}		
 	}
-	//formatStringOutput(result, decimalFormatPrescision);
 	return result;
 }
 
@@ -185,123 +180,4 @@ std::string BigFloat::toBinary() const
 	binary.insert(binary.begin() + 1, '.');
 	binary += "e" + std::to_string(m_exponent);
 	return binary;
-}
-
-void BigFloat::formatStringOutput(std::string& str, size_t decimalPrecision)
-{
-	size_t decimal = str.find('.');
-	if (decimal == std::string::npos)
-		return;
-
-	size_t i = 0;
-	for (; i < decimalPrecision && i < str.size(); ++i)
-	{
-		if (str[i + decimal + 1] != '0')
-			break;
-	}
-
-	if (i == decimalPrecision)
-	{
-		str = str.substr(0, decimal + 1);
-		return;
-	}
-
-	size_t zeroCounter = 0;
-	size_t nineCounter = 0;
-
-	for (; i < str.size() - decimal - 1 && i < decimalPrecision; ++i)
-	{
-		if (str[i + decimal + 1] == '0')
-		{
-			for (; i < str.size() - decimal - 1; ++i, ++zeroCounter)
-			{
-				if (str[i + decimal + 1] != '0')
-					break;
-				else if (zeroCounter > 10)
-				{
-					str = str.substr(0, i + decimal + 1 - zeroCounter);
-					return;
-				}
-			}
-			zeroCounter = 0;
-		}
-
-		if (str[i + decimal + 1] == '9')
-		{
-			for (; i < str.size() - decimal - 1; ++i, ++nineCounter)
-			{
-				if (str[i + decimal + 1] != '9')
-					break;
-				else if (nineCounter > 10)
-				{
-					str = str.substr(0, i + decimal + 1 - nineCounter);
-					char carry = 1;
-					char back = (str.back() - '0' + carry) % 10 + '0';
-					carry = (str.back() - '0' + carry) / 10;
-					str.back() = back;
-					while (carry != 0 && str.size() - 1 != decimal)
-					{
-						str.pop_back();
-						back = (str.back() - '0' + carry) % 10 + '0';
-						carry = (str.back() - '0' + carry) / 10;
-						str.back() = back;
-					}
-					if (carry && str.size() - 1 == decimal)
-					{
-						str.pop_back();
-						size_t i = str.size() - 1;
-						while (carry != 0 && i != 0)
-						{
-							back = (str.back() - '0' + carry) % 10 + '0';
-							carry = (str.back() - '0' + carry) / 10;
-							str.back() = back;
-							i--;
-						}
-						if (carry && i == 0)
-							str.insert(0, "1");
-					}
-					return;
-				}
-			}
-			nineCounter = 0;
-		}
-	}
-	--i;
-	if (i == decimalPrecision - 1)
-	{
-		if(str.size() - 1 <= i + decimal + 1)
-			return;
-		if (str[i + decimal + 2] < '5')
-		{
-			str = str.substr(0, i + decimal + 2);
-			return;
-		}
-		str = str.substr(0, i + decimal + 2);
-		char carry = 1;
-		char back = (str.back() - '0' + carry) % 10 + '0';
-		carry = (str.back() - '0' + carry) / 10;
-		str.back() = back;
-		while (carry != 0 && str.size() - 1 != decimal)
-		{
-			str.pop_back();
-			back = (str.back() - '0' + carry) % 10 + '0';
-			carry = (str.back() - '0' + carry) / 10;
-			str.back() = back;
-		}
-		if (carry && str.size() - 1 == decimal)
-		{
-			str.pop_back();
-			size_t i = str.size() - 1;
-			while (carry != 0 && i != 0)
-			{
-				back = (str.back() - '0' + carry) % 10 + '0';
-				carry = (str.back() - '0' + carry) / 10;
-				str.back() = back;
-				i--;
-			}
-			if (carry && i == 0)
-				str.insert(0, "1");
-		}
-		return;
-	}
 }

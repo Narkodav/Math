@@ -17,7 +17,7 @@ class BigInt
 	friend class BigUint;
 	friend class BigFloat;
 public:
-	using StorageType = uint64_t;
+	using StorageType = BigUint::StorageType;
 	static const size_t STORAGE_SIZE = sizeof(StorageType) * 8;
 	static const bool POSITIVE = false;
 	static const bool NEGATIVE = true;
@@ -47,14 +47,14 @@ public:
 	BigInt(BigUint&& other, bool sign = POSITIVE) noexcept;
 
 	template<typename T>
-	BigInt(T&& other) noexcept requires (std::is_unsigned_v<T> && (sizeof(T) <= sizeof(StorageType)))
+	BigInt(T&& other) noexcept requires (std::is_unsigned_v<T>)
 	{
 		m_sign = POSITIVE;
 		m_num = std::forward<T>(other);
 	}
 
 	template<typename T>
-	BigInt(T&& other) noexcept requires (std::is_signed_v<T> && (sizeof(T) <= sizeof(StorageType)))
+	BigInt(T&& other) noexcept requires (std::is_signed_v<T>)
 	{
 		if (other < 0)
 			m_sign = NEGATIVE;
@@ -268,7 +268,7 @@ public:
 		if(str[start] == '0')
 		{
 			m_sign = POSITIVE;
-			m_num = 0;
+			m_num = StorageType(0);
 			return;
 		}
 		m_num.initFromString(str.substr(start));

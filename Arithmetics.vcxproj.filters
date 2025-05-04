@@ -27,9 +27,6 @@
     <ClInclude Include="BigNum\BigUint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BigNum\BigFloat.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="BigNum\Math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -37,6 +34,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BigNum\BigFloatArithmetic.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BigNum\BigFloat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -53,10 +53,10 @@
     <ClCompile Include="BigNum\BigUint.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BigNum\BigFloat.cpp">
+    <ClCompile Include="Tensor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Tensor.cpp">
+    <ClCompile Include="BigNum\BigFloat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

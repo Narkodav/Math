@@ -21,7 +21,7 @@ BigInt& BigInt::operator=(BigUint&& other) noexcept
 
 BigInt power(BigInt base, BigInt exponent)
 {	
-	if (base == -1)
+	if (base == BigInt(-1))
 		if (exponent.isEven())
 			return 1;
 		else return -1;

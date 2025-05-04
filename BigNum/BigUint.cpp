@@ -19,15 +19,15 @@ BigUint& BigUint::operator=(BigInt&& other) noexcept
 
 BigUint power(BigUint base, BigUint exponent)
 {
-	if (exponent < 0)
+	if (exponent < BigUint::StorageType(0))
 		throw std::invalid_argument("Negative exponent is not supported on BigUints, use BigFloats instead");
-	if (exponent == 0) {
-		return BigUint(1);
+	if (exponent == BigUint::StorageType(0)) {
+		return BigUint(BigUint::StorageType(1));
 	}
-	if (exponent == 0) return BigUint(1);
-	if (base == 0 || base == 1) return std::move(base);
+	if (exponent == BigUint::StorageType(0)) return BigUint(BigUint::StorageType(1));
+	if (base == BigUint::StorageType(0) || base == BigUint::StorageType(1)) return std::move(base);
 
-	BigUint result = 1;
+	BigUint result = BigUint::StorageType(1);
 
 	while (exponent.raw().size() != 0) {
 		if (exponent.raw().front() & 1) {

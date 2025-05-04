@@ -105,6 +105,42 @@ public:
 		return *this;
 	}
 
+	template<typename T>
+	BigUint& operator=(T&& other) noexcept requires (std::is_unsigned_v<T> && (sizeof(T) > sizeof(StorageType)))
+	{
+		T num = std::forward<T>(other);
+		m_num.clear();		
+		if (num != 0)
+		{
+			m_num.reserve(sizeof(T) / sizeof(StorageType));
+			while (num != 0)
+			{
+				m_num.push_back(num & (T)std::numeric_limits<StorageType>::max());
+				num >>= STORAGE_SIZE;
+			}
+		}
+		return *this;
+	}
+
+	template<typename T>
+	BigUint& operator=(T&& other) noexcept requires (std::is_signed_v<T> && (sizeof(T) > sizeof(StorageType)))
+	{
+		T num = std::forward<T>(other);
+		if (other < 0)
+			num = -num;
+		m_num.clear();
+		if (other != 0)
+		{
+			m_num.reserve(sizeof(T) / sizeof(StorageType));
+			while (num != 0)
+			{
+				m_num.push_back(num & (T)std::numeric_limits<StorageType>::max());
+				num >>= STORAGE_SIZE;
+			}
+		}
+		return *this;
+	}
+
 	BigUint operator+(const BigUint& other) const noexcept
 	{
 		if (m_num.size() > other.m_num.size())
@@ -220,7 +256,8 @@ public:
 			return *this;
 		size_t limbsToAdd = shift / STORAGE_SIZE;
 		size_t bitsToAdd = shift % STORAGE_SIZE;
-		StorageType addMask = ~((StorageType(1) << (bitsToAdd + 1)) - 1);
+		size_t remainingBits = STORAGE_SIZE - bitsToAdd;
+		StorageType addMask = ~((StorageType(1) << remainingBits) - 1);
 
 		m_num.insert(m_num.begin(), limbsToAdd, 0);
 		if (bitsToAdd == 0)
@@ -230,7 +267,7 @@ public:
 		for (size_t i = m_num.size() - 1; i > limbsToAdd; --i)
 		{
 			m_num[i] <<= bitsToAdd;
-			m_num[i] |= (m_num[i - 1] & addMask) >> (STORAGE_SIZE - bitsToAdd);
+			m_num[i] |= (m_num[i - 1] & addMask) >> remainingBits;
 		}
 		m_num[limbsToAdd] <<= bitsToAdd;
 		if (m_num.back() == 0)
