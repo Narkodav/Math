@@ -1,0 +1,70 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-65c9ba60d3a8eb860f7a.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.20"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "Arithmetics",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "Arithmetics::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-Arithmetics-Debug-7a503ec0068d5ca6c9a6.json",
+					"name" : "Arithmetics",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ArithmeticsTests::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ArithmeticsTests-Debug-520eee68e4fc878637c7.json",
+					"name" : "ArithmeticsTests",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "E:/Program Files (x86)/Code/C_code/libraries/Arithmetics/build/clang-debug",
+		"source" : "E:/Program Files (x86)/Code/C_code/libraries/Arithmetics"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}
