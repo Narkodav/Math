@@ -5,7 +5,7 @@ project(Arithmetics LANGUAGES CXX)
 # Source files for library
 # =========================
 file(GLOB_RECURSE SRC_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Math/*.cpp
 )
 
 option(ARITHMETICS_BUILD_SHARED "Build Arithmetics as a shared library" OFF)
@@ -87,7 +87,7 @@ install(EXPORT ArithmeticsTargets
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/install/ArithmeticsConfig.cmake.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/ArithmeticsConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/ArithmeticsConfig.cmake
     INSTALL_DESTINATION lib/cmake/Arithmetics
 )
