@@ -7,19 +7,20 @@ namespace Math {
 	constexpr decltype(auto) translate(const TensorExpression<M>& m, const TensorExpression<V>& v) {
 		auto result = m.eval();
 		decltype(auto) vec = v.eval();
-		result[3] += result[0] * vec[0] + result[1] * vec[1] + result[2] * vec[2] ;
+		result[3] += result[0] * vec[0] + result[1] * vec[1] + result[2] * vec[2];
 		return result;
 	}
 
 	template<Mat4Expr M, Vec3Expr V, typename T>
 	constexpr decltype(auto) rotate(const TensorExpression<M>& m, const TensorExpression<V>& v, T&& angle) {
+		using ValueType = std::remove_cvref_t<T>;
 		auto c = std::cos(std::forward<T>(angle));
 		auto s = std::sin(std::forward<T>(angle));
 
 		decltype(auto) vec = v.eval();
 
 		auto axis = normalize(v).eval();
-		auto temp = ((T{1} - c) * axis).eval();
+		auto temp = ((ValueType{1} - c) * axis).eval();
 
 		TensorBase<Shape<typename M::ValueType, 4, 4>> rotate;
 		rotate[0][0] = c + temp[0] * axis[0];
@@ -44,7 +45,7 @@ namespace Math {
 		return result;
 	}
 
-	template<Mat4Expr M, Vec3Expr V, typename T>
+	template<Mat4Expr M, Vec3Expr V>
 	constexpr decltype(auto) scale(const TensorExpression<M>& m, const TensorExpression<V>& v) {
 		decltype(auto) mat = m.eval();
 		decltype(auto) vec = v.eval();
@@ -105,9 +106,9 @@ namespace Math {
 		using ValueType = typename E::ValueType;
 
 		TensorBase<Shape<ValueType, 4, 4>> result(
-			s.x, 			up2.x, 			-f.x, 			1,
-			s.y, 			up2.y, 			-f.y, 			1,
-			s.z, 			up2.z, 			-f.z, 			1,
+			s[0], 			up2[0], 			-f[0], 			1,
+			s[1], 			up2[1], 			-f[1], 			1,
+			s[2], 			up2[2], 			-f[2], 			1,
 			-dot(s, eye),	-dot(up2, eye),	dot(f, eye), 	1
 		);
 		return result;
@@ -126,9 +127,9 @@ namespace Math {
 		using ValueType = typename E::ValueType;
 
 		TensorBase<Shape<ValueType, 4, 4>> result(
-			s.x, 			up2.x, 			f.x, 			1,
-			s.y, 			up2.y, 			f.y, 			1,
-			s.z, 			up2.z, 			f.z, 			1,
+			s[0], 			up2[0], 			f[0], 			1,
+			s[1], 			up2[1], 			f[1], 			1,
+			s[2], 			up2[2], 			f[2], 			1,
 			-dot(s, eye),	-dot(up2, eye),	-dot(f, eye), 	1
 		);
 		return result;
@@ -144,4 +145,72 @@ namespace Math {
 		if constexpr (hand == Handedness::Right) return lookAtRH(e, c, u);
 		else return lookAtLH(e, c, u);
 	}
+
+	template<typename T>
+	constexpr decltype(auto) perspectiveRH(T fovy, T aspect, T zNear, T zFar, T NDCmin, T NDCmax) {
+		assert(std::abs(aspect - std::numeric_limits<T>::epsilon()) > static_cast<T>(0));
+
+		T tanHalfFovy = std::tan(fovy / static_cast<T>(2));
+
+		TensorBase<Shape<T, 4, 4>> result(static_cast<T>(0));
+		result[0][0] = static_cast<T>(1) / (aspect * tanHalfFovy);
+		result[1][1] = static_cast<T>(1) / (tanHalfFovy);
+		result[2][2] = - (NDCmax * zNear - NDCmin * zFar) / (zFar - zNear);
+		result[2][3] = - static_cast<T>(1);
+		result[3][2] = - (zNear * zFar * (NDCmax - NDCmin)) / (zFar - zNear);
+		return result;
+	}
+
+	template<typename T>
+	constexpr decltype(auto) perspectiveLH(T fovy, T aspect, T zNear, T zFar, T NDCmin, T NDCmax) {
+		assert(std::abs(aspect - std::numeric_limits<T>::epsilon()) > static_cast<T>(0));
+
+		T tanHalfFovy = std::tan(fovy / static_cast<T>(2));
+
+		TensorBase<Shape<T, 4, 4>> result(static_cast<T>(0));
+		result[0][0] = static_cast<T>(1) / (aspect * tanHalfFovy);
+		result[1][1] = static_cast<T>(1) / (tanHalfFovy);
+		result[2][2] = (NDCmax * zNear - NDCmin * zFar) / (zFar - zNear);
+		result[2][3] = static_cast<T>(1);
+		result[3][2] = - (zNear * zFar * (NDCmax - NDCmin)) / (zFar - zNear);
+		return result;
+	}
+
+	template<Handedness hand = Handedness::Right, typename T>
+	constexpr decltype(auto) perspective(T fovy, T aspect, T zNear, T zFar, T NDCmin = 0, T NDCmax = 1) {
+		if constexpr (hand == Handedness::Right) return perspectiveRH(fovy, aspect, zNear, zFar, NDCmin, NDCmax);
+		else return perspectiveLH(fovy, aspect, zNear, zFar, NDCmin, NDCmax);
+	}
+
+
+	template<typename T>
+	constexpr decltype(auto) orthoRH(T left, T right, T bottom, T top, T zNear, T zFar, T NDCmin, T NDCmax) {
+		TensorBase<Shape<T,4,4>> result(static_cast<T>(1));
+		result[0][0] = static_cast<T>(2) / (right - left);
+		result[1][1] = static_cast<T>(2) / (top - bottom);
+		result[2][2] = -(NDCmax - NDCmin) / (zFar - zNear);
+		result[3][0] = -(right + left) / (right - left);
+		result[3][1] = -(top + bottom) / (top - bottom);
+		result[3][2] = (NDCmin * zFar - NDCmax * zNear) / (zFar - zNear);
+		return result;
+	}
+
+	template<typename T>
+	constexpr decltype(auto) orthoLH(T left, T right, T bottom, T top, T zNear, T zFar, T NDCmin, T NDCmax) {
+		TensorBase<Shape<T,4,4>> result(static_cast<T>(1));
+		result[0][0] = static_cast<T>(2) / (right - left);
+		result[1][1] = static_cast<T>(2) / (top - bottom);
+		result[2][2] = (NDCmax - NDCmin) / (zFar - zNear);
+		result[3][0] = -(right + left) / (right - left);
+		result[3][1] = -(top + bottom) / (top - bottom);
+		result[3][2] = (NDCmin * zFar - NDCmax * zNear) / (zFar - zNear);
+		return result;
+	}
+
+	template<Handedness hand = Handedness::Right, typename T>
+	constexpr decltype(auto) ortho(T left, T right, T bottom, T top, T zNear, T zFar, T NDCmin = 0, T NDCmax = 1) {
+		if constexpr (hand == Handedness::Right) return orthoRH(left, right, bottom, top, zNear, zFar, NDCmin, NDCmax);
+		else return orthoLH(left, right, bottom, top, zNear, zFar, NDCmin, NDCmax);
+	}
+
 }//namespace glm

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <iomanip>
 #include <bitset>
+#include <cstdlib>
+#include <iostream>
 
 #include "Math/BigNum/BigInt.h"
 #include "Math/BigNum/StaticBigUint.h"
@@ -77,9 +79,26 @@ void fooDef(Math::TensorView<int, 2,3,4> view) {
 
 }
 
+using Coordinate3D = Math::Tensor<uint32_t, 3>;
+using CoordinateSigned3D = Math::Tensor<int32_t, 3>;
+using Position3D = Math::Tensor<float, 3>;
+using Direction3D = Math::Tensor<int32_t, 3>;
+using Size3D = Math::Tensor<uint32_t, 3>;
+
+using Coordinate2D = Math::Tensor<uint32_t, 2>;
+using CoordinateSigned2D = Math::Tensor<int32_t, 2>;
+using Position2D = Math::Tensor<float, 2>;
+using Direction2D = Math::Tensor<int32_t, 2>;
+using Size2D = Math::Tensor<uint32_t, 2>;
+
+using ChunkRelativeCoord3D = Math::Tensor<int32_t, 3>;
+
+constexpr std::array<Direction2D, 4> s_directions2D = {
+    Direction2D(0, -1), Direction2D(1, 0), Direction2D(0, 1), Direction2D(-1, 0),
+};
+
 int main() {
 	using namespace Math;
-
     //--------------------------------------------------------------------------
     // Construction
     //--------------------------------------------------------------------------
@@ -329,32 +348,28 @@ int main() {
 
     Tensor<int, 4, 4> tt1(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
     Tensor<int, 3, 3> tt2 = tt1;
+    Tensor<int, 5, 5> tt3(tt1, 3);
 
-    for(size_t c = 0; c < tt1.outerSize(); ++c) {
-        auto col = tt1[c];
-        for(size_t r = 0; r < tt1.outerSize(); ++r) {
-            auto& val = col[r];
+    for(auto col : tt1) {
+        for(auto& val : col) {
             std::cout << val << " ";
         }
         std::cout << "\n";
     }
     std::cout << "\n";
 
-    for(size_t c = 0; c < tt2.outerSize(); ++c) {
-        auto col = tt2[c];
-        for(size_t r = 0; r < tt2.outerSize(); ++r) {
-            auto& val = col[r];
+    for(auto col : tt2) {
+        for(auto& val : col) {
             std::cout << val << " ";
         }
         std::cout << "\n";
     }
+    std::cout << "\n";
 
     tt1 = tt2;
     
-    for(size_t c = 0; c < tt1.outerSize(); ++c) {
-        auto col = tt1[c];
-        for(size_t r = 0; r < tt1.outerSize(); ++r) {
-            auto& val = col[r];
+    for(auto col : tt1) {
+        for(auto& val : col) {
             std::cout << val << " ";
         }
         std::cout << "\n";
@@ -363,17 +378,27 @@ int main() {
     
     tt1 = tt2;
 
-    for(size_t c = 0; c < tt2.outerSize(); ++c) {
-        auto col = tt2[c];
-        for(size_t r = 0; r < tt2.outerSize(); ++r) {
-            auto& val = col[r];
+    for(auto col : tt2) {
+        for(auto& val : col) {
             std::cout << val << " ";
         }
         std::cout << "\n";
     }
+    std::cout << "\n";
+
+    for(auto col : tt3) {
+        for(auto& val : col) {
+            std::cout << val << " ";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+
 
     Tensor<int, 3> h1;
     Tensor<int, 3, 3> h2;
+    Tensor<int, 4> h3;
+    Tensor<int, 4, 4> h4(h2, 2);
     h1.dot(h1);
     h1.length();
     h1.normalize();
@@ -381,6 +406,109 @@ int main() {
     h1.cross(h1);
     // h2.length();
     // h2.normalize();
+
+    auto expr1 = Math::FVec3() + Math::FVec3();
+
+    Math::lookAt(Math::FVec3(), Math::FVec3() + Math::FVec3(), Math::FVec3());
+
+    static_assert(decltype(expr1)::ShapeType::dims().size() == 1);
+    static_assert(decltype(expr1)::ShapeType::dims()[0] == 3);
+    static_assert(Vec3Expr<decltype(expr1)>);
+    
+    h3 = h1 + h3;
+
+    h4.translate(h1);
+    h4.transpose();
+
+    static constexpr Tensor<int, 3> cten{1, 2, 3};
+
+    auto ress1 = Math::all(h4);
+    auto ress2 = Math::none(h4);
+
+    auto ress3 = Math::epsilonEqual(h1, h3, 0);
+
+    Tensor<bool, 3> jj = cten == h3; 
+
+    // automatically converts to bool using Math::all
+    if(cten == h3) {
+
+    } else {
+
+    }
+
+    const Tensor<int, 4> ct{};
+    auto cv = ct.view();
+
+    Math::IVec3 coord1(ct * jj, 1);
+
+    struct UserVec4 {
+        float x, y, z, w;
+    };
+
+    UserVec4 userVec4{1, 2, 3, 4};
+
+    coord1 = userVec4;
+    
+    Math::IVec3 coord2(userVec4);
+
+    UserVec4 userVec4Res = coord1.as<UserVec4>(5);
+
+    std::cout << userVec4Res.x << userVec4Res.y << userVec4Res.z << userVec4Res.w << std::endl;
+
+    Math::IVec3 init(1, 2);
+
+    Math::FVec4 vec(0, 0, 4.65251535E-13, 4);
+
+    for(auto& val : vec) {
+        std::cout << val << " ";
+    }
+    std::cout << "\n";
+
+    auto vecRed = Math::FVec3(vec);
+
+    static_assert(std::convertible_to<Math::FVec4, float>);
+
+    for(auto& val : vecRed) {
+        std::cout << val << " ";
+    }
+    std::cout << "\n";
+
+    vecRed = vecRed.normalize();
+
+    std::cout << vecRed[0] << " " << vecRed[1] << " " << vecRed[2] << std::endl;
+
+    FVec3 test = (Math::FVec3(1.0f) / Math::FVec3(2.0f) * 4).eval();
+
+    test = test.normalize();
+
+    std::cout << sizeof(decltype(Math::FVec4() + Math::FVec4() - Math::FVec4() + vec + 4)) << std::endl;
+
+    std::cout << test[0] << " " << test[1] << " " << test[2] << std::endl;
+
+    auto res = Math::lookAt(Math::FVec3(0.0f), Math::FVec3(0.0f, 0.0f, -1.0f), Math::FVec3(0.0f, 1.0f, 0.0f));
+    std::cout << '\n';
+    for(auto col : res) {
+        for(auto val : col) {
+            std::cout << val << " ";
+        }
+        std::cout << '\n';
+    }
+    std::cout << std::endl;
+
+	const std::array<Math::FMat4, 6> conversionMatrices = {
+		// Front face - no rotation needed (identity matrix)
+		Math::FMat4::identity(),
+		// Right face - 90 degrees around Y axis
+		Math::rotate(Math::FMat4::identity(), Math::FVec3(0.0f, 1.0f, 0.0f), Math::radians(90.0f)),
+		// Top face - -90 degrees around X axis
+		Math::rotate(Math::FMat4::identity(), Math::FVec3(1.0f, 0.0f, 0.0f), Math::radians(90.0f)),
+		// Back face - 180 degrees around Y axis
+		Math::rotate(Math::FMat4::identity(), Math::FVec3(0.0f, 1.0f, 0.0f), Math::radians(180.0f)),
+		// Left face - -90 degrees around Y axis
+		Math::rotate(Math::FMat4::identity(), Math::FVec3(0.0f, 1.0f, 0.0f), Math::radians(-90.0f)),
+		// Bottom face - 90 degrees around X axis
+		Math::rotate(Math::FMat4::identity(), Math::FVec3(1.0f, 0.0f, 0.0f), Math::radians(-90.0f))
+	};
 
     std::cout << "Done" << std::endl;
     return 0;

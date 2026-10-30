@@ -48,7 +48,7 @@ namespace Math::Utility {
 	}
 
 	std::pair<uint64_t, uint64_t> divModFallback(uint64_t high, uint64_t low, uint64_t divisor) {
-		std::pair<uint64_t, uint64_t> res;
+		//std::pair<uint64_t, uint64_t> res;
 		// Handle division by zero
 		if (divisor == 0) {
 			// Division by zero - behavior is undefined, return 0 and remainder 0
@@ -57,7 +57,7 @@ namespace Math::Utility {
 		
 		// Special case: if high < divisor, we can use standard 64-bit division
 		if (high < divisor) {
-			uint64_t quotient;
+			//uint64_t quotient;
 			
 			// Combine high and low into a 128-bit number and divide
 			// Using binary long division algorithm

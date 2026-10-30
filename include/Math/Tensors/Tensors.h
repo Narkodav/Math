@@ -8,6 +8,7 @@
 #include "Math/Tensors/Transform.h"
 #include "Math/Tensors/MiscTensorFunctions.h"
 #include "Math/Tensors/TensorBase.h"
+#include "Math/Common.h"
 
 namespace Math {
 
@@ -15,50 +16,47 @@ namespace Math {
     class TensorFunctions;
 
     template<typename ShapeT>
-    class TensorViewBase : public TensorFunctions<TensorViewBase<ShapeT>, TensorWritableExpression<TensorViewBase<ShapeT>>, ShapeT> {
+    class TensorViewBase : public TensorFunctions<TensorViewBase<ShapeT>, 
+    TensorAssignableExpression<TensorViewBase<ShapeT>,
+    TensorViewExpression<TensorViewBase<ShapeT>, ShapeT>>,  
+    ShapeT> {
     public:
         using NotIncludedInScalarArithmetic = void;
-        using Base = TensorFunctions<TensorViewBase<ShapeT>, TensorWritableExpression<TensorViewBase<ShapeT>>, ShapeT>;
-        using BaseExpr = TensorWritableExpression<TensorViewBase<ShapeT>>;
+        using IsTensorExpression = void;
+        using IsAssignableExpression = void;
+        using Self = TensorViewBase<ShapeT>;
+        using BaseExpr = TensorAssignableExpression<Self, TensorViewExpression<Self, ShapeT>>;
+        using Base = TensorFunctions<Self, BaseExpr, ShapeT>;
         using ShapeType = ShapeT;
         using ValueType = typename ShapeType::ValueType;
 
-    private:
-        ValueType* m_data;
-
-    public:
         template<typename U>
-        constexpr explicit TensorViewBase(U* ptr) requires std::same_as<std::remove_cv_t<ValueType>, U> : m_data(ptr) {}
+        constexpr explicit TensorViewBase(U* ptr) requires std::same_as<std::remove_cv_t<ValueType>, U> : Base(ptr) {}
 
         template<typename U>
         constexpr TensorViewBase(TensorViewBase<typename ShapeType::template ConvertedSelf<U>::ViewType> view) 
-            requires std::same_as<std::remove_cv_t<ValueType>, U> : m_data(view.data()) {}
+            requires std::same_as<std::remove_cv_t<ValueType>, U> : Base(view.data()) {}
 
         using Base::size;
         using Base::operator[];
         using Base::operator=;
         using Base::Base;
-        
-        constexpr const ValueType* data() const { return m_data; }
-        constexpr ValueType* data() { return m_data; }
     };
 
     template<typename ShapeT, size_t Alignment>
-    class alignas(Alignment) TensorBase : public TensorFunctions<TensorBase<ShapeT, Alignment>, 
-        TensorStorageExpression<TensorBase<ShapeT, Alignment>>, ShapeT> {
+    class alignas(Alignment) TensorBase : public TensorFunctions<TensorBase<ShapeT, Alignment>,
+        TensorConstructibleExpression<TensorBase<ShapeT, Alignment>,
+        TensorDataExpression<TensorBase<ShapeT, Alignment>, ShapeT, Alignment>>, 
+        ShapeT> {
     public:
         using NotIncludedInScalarArithmetic = void;
+        using IsTensorExpression = void;
+        using IsAssignableExpression = void;
         using Self = TensorBase<ShapeT, Alignment>;
-        using BaseExpr = TensorStorageExpression<TensorBase<ShapeT, Alignment>>;
+        using BaseExpr = TensorConstructibleExpression<Self, TensorDataExpression<Self, ShapeT, Alignment>>;
         using Base = TensorFunctions<Self, BaseExpr, ShapeT>;
         using ShapeType = ShapeT;
         using ValueType = typename ShapeType::ValueType;
-
-    private:
-        alignas(Alignment) ValueType m_storage[Base::size()];
-
-    public:
-        constexpr TensorBase() = default;
 
         using Base::size;
         using Base::operator[];
@@ -74,37 +72,134 @@ namespace Math {
         constexpr operator typename ShapeType::ViewType() { return Base::view(); }
         constexpr operator typename ShapeType::ConstViewType() const { return Base::view(); }
 
-        constexpr const ValueType* data() const { return m_storage; }
-        constexpr ValueType* data() { return m_storage; }
-        static constexpr size_t alignment() { return Alignment; }
+        static constexpr auto identity() requires (ShapeType::dims().size() == 2 && ShapeType::dims()[0] == ShapeType::dims()[1]) {
+            return diagonal(1.0f);
+        }
+
+        static constexpr auto diagonal(ValueType value) requires (ShapeType::dims().size() == 2 && ShapeType::dims()[0] == ShapeType::dims()[1]) {
+            Self mat(0.f);
+            for(size_t i = 0; i < ShapeType::dims()[0]; ++i) mat[i][i] = value;
+            return mat;
+        }
+
+        template<typename T>
+        static constexpr auto diagonal(const TensorExpression<T>& expr) requires (ShapeType::dims().size() == 2 && 
+        ShapeType::dims()[0] == ShapeType::dims()[1] && T::ShapeType::dims().size() == 1 && 
+        T::ShapeType::dims()[0] == ShapeType::dims()[0]) {
+            Self mat(0.f);
+            expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+                mat[i][i] = expr.eval(i, std::forward<Indices>(idx)...);
+            });
+            return mat;
+        }
     };
 
     template<typename Derived, typename Base, typename ShapeT>
     class TensorFunctions : public Base {
     public:
         using NotIncludedInScalarArithmetic = void;
+        using IsTensorExpression = void;
+        using IsAssignableExpression = void;
         using ShapeType = ShapeT;
         using ValueType = typename ShapeType::ValueType;
 
         using Base::operator=;
         using Base::Base;
+        using Base::data;
+        using Base::size;
 
-    public:
-        static constexpr size_t size() { return ShapeType::size(); }
-        static constexpr size_t stride() { return ShapeType::stride(); }
-        static constexpr const auto& dims() { return ShapeType::dims(); }
-        static constexpr size_t dimCount() { return ShapeType::dimCount(); }
-        static constexpr size_t outerSize() { return ShapeType::outerSize(); }
+        // Conversions
+        template<typename T>
+        requires(Detail::VecLikeReverse<T, typename Derived::ValueType> && Derived::ShapeType::dims().size() == 1)
+        T as() const {
+            static constexpr auto limit = std::min(Detail::vecLikeSizeReverse<T, typename Derived::ValueType>(), Derived::ShapeType::dims()[0]);
+            T vec;
+            Detail::assignToVecLike<limit - 1>(data(), vec);
+            return vec;
+        }
 
-        constexpr ShapeType::SubViewType operator[](size_t i) { return ShapeType::getView(derived().data(), i); }
-        constexpr ShapeType::ConstSubViewType operator[](size_t i) const { return ShapeType::getViewConst(derived().data(), i); }
+        template<typename T, typename U>
+        requires(Detail::VecLikeReverse<T, typename Derived::ValueType> && Derived::ShapeType::dims().size() == 1 && 
+            Detail::vecLikeSizeReverse<T, typename Derived::ValueType>() > Derived::ShapeType::dims()[0])
+        T as(U&& arg) const {
+            T vec;
+            static constexpr auto limit = Detail::vecLikeSizeReverse<T, typename Derived::ValueType>();
+            Detail::assignToVecLike<Derived::ShapeType::dims()[0] - 1>(data(), vec);
+            Detail::assignToVecLike<limit - 1, Derived::ShapeType::dims()[0]>(std::forward<U>(arg), vec);
+            return vec;
+        }
 
-        constexpr auto view() { return typename ShapeType::ViewType(derived().data()); }
-        constexpr auto view() const { return typename ShapeType::ConstViewType(derived().data()); }
+        // Iterator support
+        class Iterator {
+            friend class TensorFunctions;
+            typename Derived::ValueType* m_data;
+
+            constexpr Iterator(typename Derived::ValueType* data) : m_data(data) {}
+        public:
+            constexpr Iterator() = default;
+
+            constexpr decltype(auto) operator*() { return (Derived::ShapeType::getView(m_data, 0)); }
+            constexpr decltype(auto) operator*() const { return (Derived::ShapeType::getViewConst(m_data, 0)); }
+
+            constexpr Iterator& operator++() {
+                m_data += Derived::ShapeType::stride();
+                return *this;
+            }
+
+            constexpr Iterator& operator--() {
+                m_data -= Derived::ShapeType::stride();
+                return *this;
+            }
+
+            constexpr std::strong_ordering operator<=>(const Iterator&) const = default;
+        };
+
+        class ConstIterator {
+            friend class TensorFunctions;
+            typename Derived::ValueType* m_data;
+
+            constexpr ConstIterator(typename Derived::ValueType* data) : m_data(data) {}
+        public:
+            constexpr ConstIterator() = default;
+
+            constexpr decltype(auto) operator*() const { return (Derived::ShapeType::getViewConst(m_data, 0)); }
+
+            constexpr ConstIterator& operator++() {
+                m_data += Derived::ShapeType::stride();
+                return *this;
+            }
+
+            constexpr ConstIterator& operator--() {
+                m_data -= Derived::ShapeType::stride();
+                return *this;
+            }
+
+            constexpr std::strong_ordering operator<=>(const ConstIterator&) const = default;
+        };
+
+        constexpr decltype(auto) operator[](size_t i) { return (Derived::ShapeType::getView(data(), i)); }
+        constexpr decltype(auto) operator[](size_t i) const { return (Derived::ShapeType::getViewConst(data(), i)); }
+
+        constexpr decltype(auto) view() { return typename Derived::ShapeType::ViewType(data()); }
+        constexpr decltype(auto) view() const { return typename Derived::ShapeType::ConstViewType(data()); }
+
+        constexpr Iterator begin() { return Iterator(data()); }
+        constexpr Iterator end() { return Iterator(data() + size()); }
+        constexpr ConstIterator begin() const { return ConstIterator(data()); }
+        constexpr ConstIterator end() const { return ConstIterator(data() + size()); }
+        constexpr ConstIterator cbegin() const { return ConstIterator(data()); }
+        constexpr ConstIterator cend() const { return ConstIterator(data() + size()); }
+
+        constexpr decltype(auto) front() { return (Derived::ShapeType::getView(data(), 0)); }
+        constexpr decltype(auto) back() { return (Derived::ShapeType::getView(data(), size() - 1)); }
+
+        constexpr decltype(auto) front() const { return (Derived::ShapeType::getViewConst(data(), 0)); }
+        constexpr decltype(auto) back() const { return (Derived::ShapeType::getViewConst(data(), size() - 1)); }
+
 
         // Vector utilities
         template<typename Result = float, VecExpr R>
-        requires (ShapeType::dims() == R::ShapeType::dims() && VecExpr<Derived>)
+        requires (Derived::ShapeType::dims() == R::ShapeType::dims() && VecExpr<Derived>)
         constexpr Result dot(const TensorExpression<R>& other) const {
             return Math::dot<Result>(*this, other);
         }
@@ -119,7 +214,7 @@ namespace Math {
         }
 
         template<typename Result = float, VecExpr B>
-        requires (ShapeType::dims() == B::ShapeType::dims() && VecExpr<Derived>)
+        requires (Derived::ShapeType::dims() == B::ShapeType::dims() && VecExpr<Derived>)
         constexpr Result distance(const TensorExpression<B>& b) const {
             return Math::distance<Result>(*this, b);
         }
@@ -130,47 +225,43 @@ namespace Math {
         }
 
         template<VecExpr N>
-        requires (ShapeType::dims() == N::ShapeType::dims() && VecExpr<Derived>)
+        requires (Derived::ShapeType::dims() == N::ShapeType::dims() && VecExpr<Derived>)
         constexpr decltype(auto) reflect(const TensorExpression<N>& n) const {
             return Math::reflect(*this, n);
         }
 
         template<VecExpr N>
-        requires (ShapeType::dims() == N::ShapeType::dims() && VecExpr<Derived>)
+        requires (Derived::ShapeType::dims() == N::ShapeType::dims() && VecExpr<Derived>)
         constexpr decltype(auto) refract(const TensorExpression<N>& n, float eta) const {
             return Math::refract(*this, n, eta);
         }
 
         // Project this on B
         template<VecExpr B>
-        requires (ShapeType::dims() == B::ShapeType::dims() && VecExpr<Derived>)
+        requires (Derived::ShapeType::dims() == B::ShapeType::dims() && VecExpr<Derived>)
         constexpr decltype(auto) project(const TensorExpression<B>& b) const {
             return Math::project(*this, b);
         }
 
         template<VecExpr B>
-        requires (ShapeType::dims() == B::ShapeType::dims() && VecExpr<Derived>)
+        requires (Derived::ShapeType::dims() == B::ShapeType::dims() && VecExpr<Derived>)
         constexpr decltype(auto) angle(const TensorExpression<B>& b) const {
             return Math::angle(*this, b);
         }
 
         // General utilities
-        template<typename T>
         constexpr decltype(auto) sum() const {
             return Math::sum(*this);
         }
 
-        template<typename T>
         constexpr decltype(auto) product() const {
             return Math::product(*this);
         }
 
-        template<typename T>
         constexpr decltype(auto) min() const {
             return Math::min(*this);
         }
 
-        template<typename T>
         constexpr decltype(auto) max() const {
             return Math::max(*this);
         }
@@ -181,9 +272,30 @@ namespace Math {
             return Math::mul(*this, rhs);
         }
 
-        template<SquareMatExpr T> requires (SquareMatExpr<Derived>)
-        constexpr decltype(auto) transpose() const {
+        constexpr decltype(auto) transpose() const requires (SquareMatExpr<Derived>) {
             return Math::transpose(*this);
+        }
+
+
+        template<Vec3Expr V> requires (Mat4Expr<Derived>)
+        constexpr decltype(auto) translate(const TensorExpression<V>& v) const {
+            return Math::translate(*this, v);
+        }
+
+        template<Vec3Expr V, typename T> requires (Mat4Expr<Derived>)
+        constexpr decltype(auto) rotate(const TensorExpression<V>& v, T&& angle) const {
+            return Math::rotate(*this, v, std::forward<T>(angle));
+        }
+
+        template<Vec3Expr V> requires (Mat4Expr<Derived>)
+        constexpr decltype(auto) scale(const TensorExpression<V>& v) const {
+            return Math::scale(*this, v);
+        }
+
+        template<Vec3Expr V, Vec2Expr VX, Vec2Expr VY, Vec2Expr VZ> requires (Mat4Expr<Derived>)
+        constexpr decltype(auto) shear(const TensorExpression<V>& v, const TensorExpression<VX>& vx, 
+            const TensorExpression<VY>& vy, const TensorExpression<VZ>& vz) const {
+            return Math::shear(*this, v, vx, vy, vz);
         }
 
     protected:
@@ -275,9 +387,13 @@ namespace Math {
 
     static_assert(std::is_standard_layout_v<Tensor<float, 4>>);
     static_assert(std::is_trivially_copyable_v<Tensor<float, 4>>);
+   //static_assert(std::is_trivially_constructible_v<Tensor<float, 4>>); // This does not work on MSVC
+    //static_assert(std::is_aggregate_v<Tensor<float, 4>>);
 
     static_assert(std::is_standard_layout_v<Tensor<float, 4, 4>>);
     static_assert(std::is_trivially_copyable_v<Tensor<float, 4, 4>>);
+    //static_assert(std::is_trivially_constructible_v<Tensor<float, 4, 4>>); // This does not work on MSVC
+    //static_assert(std::is_aggregate_v<Tensor<float, 4, 4>>);
 
     static_assert(sizeof(Tensor<float, 4>) == 4 * sizeof(float));
     static_assert(alignof(Tensor<float, 4>) == alignof(float));
@@ -307,19 +423,19 @@ namespace Math {
     using Vec4 = Vec<T, 4, alignment>;
 
     using FVec1 = Vec1<float>;
-    using FVec2 = Vec3<float>;
-    using FVec3 = Vec2<float>;
+    using FVec2 = Vec2<float>;
+    using FVec3 = Vec3<float>;
     using FVec4 = Vec4<float>;
 
     using DVec1 = Vec1<double>;
-    using DVec2 = Vec3<double>;
-    using DVec3 = Vec2<double>;
+    using DVec2 = Vec2<double>;
+    using DVec3 = Vec3<double>;
     using DVec4 = Vec4<double>;
 
     using IVec1 = Vec1<int32_t>;
-    using IVec2 = Vec3<int32_t>;
-    using IVec4 = Vec2<int32_t>;
-    using IVec3 = Vec4<int32_t>;
+    using IVec2 = Vec2<int32_t>;
+    using IVec3 = Vec3<int32_t>;
+    using IVec4 = Vec4<int32_t>;
 
     using UVec1 = Vec1<uint32_t>;
     using UVec2 = Vec2<uint32_t>;
@@ -338,13 +454,13 @@ namespace Math {
     using Mat4 = Mat<T, 4, 4, alignment>;
 
     using FMat1 = Mat1<float>;
-    using FMat2 = Mat3<float>;
-    using FMat3 = Mat2<float>;
+    using FMat2 = Mat2<float>;
+    using FMat3 = Mat3<float>;
     using FMat4 = Mat4<float>;
 
     using DMat1 = Mat1<double>;
-    using DMat2 = Mat3<double>;
-    using DMat3 = Mat2<double>;
+    using DMat2 = Mat2<double>;
+    using DMat3 = Mat3<double>;
     using DMat4 = Mat4<double>;
 
     using IMat1 = Mat1<int32_t>;
@@ -389,4 +505,18 @@ namespace Math {
             TensorArithmeticExpression<Expr>
         >
     );
+}
+
+namespace std {
+    template<typename T>
+    struct hash<Math::TensorExpression<T>> {
+        uint64_t operator()(const Math::TensorExpression<T>& expr) const {
+            uint64_t h = 0;
+            expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx) {
+                size_t hx = std::hash(expr.eval(i, std::forward<Indices>(idx)...));
+                h ^= hx + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2);
+            });
+            return h;
+        }
+    };
 }

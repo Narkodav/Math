@@ -44,8 +44,9 @@ namespace Math::BigNum {
 
 		BigInt(BigInt&& other) noexcept : m_num(std::exchange(other.m_num, BigUint())), m_sign(other.m_sign) {};
 
-		BigInt(const BigUint& other, bool sign = s_positive) noexcept;
-		BigInt(BigUint&& other, bool sign = s_positive) noexcept;
+		BigInt(const BigUint& other, bool sign /*= s_positive*/) noexcept : m_num(other), m_sign(sign) {};
+
+		BigInt(BigUint&& other, bool sign /*= s_positive*/) noexcept :m_num(std::exchange(other, BigUint())), m_sign(sign) {};
 
 		template<typename T>
 		BigInt(T&& other) noexcept requires (std::is_unsigned_v<T>)
@@ -83,8 +84,19 @@ namespace Math::BigNum {
 			return *this;
 		}
 
-		BigInt& operator=(const BigUint& other) noexcept;
-		BigInt& operator=(BigUint&& other) noexcept;
+		BigInt& operator=(const BigUint& other) noexcept
+		{
+			m_sign = s_positive;
+			m_num = other;
+			return *this;
+		}
+
+		BigInt& operator=(BigUint&& other) noexcept
+		{
+			m_sign = s_positive;
+			m_num = std::exchange(other, BigUint());
+			return *this;
+		}
 
 		template<typename T>
 		BigInt& operator=(T&& other) noexcept requires (std::is_unsigned_v<T> && (sizeof(T) <= sizeof(StorageType)))
@@ -303,7 +315,9 @@ namespace Math::BigNum {
 			return m_num.bitLength();
 		}
 
-		void eraseMSBs(size_t bitAmount) noexcept;
+		void eraseMSBs(size_t bitAmount) noexcept {
+			m_num.eraseMSBs(bitAmount);
+		}
 
 		std::vector<StorageType>& raw() noexcept { return m_num.raw(); };
 
@@ -313,13 +327,26 @@ namespace Math::BigNum {
 
 		const BigUint& magnitude() const noexcept { return m_num; };
 
-		std::string toBinary() const;
+		std::string toBinary() const {	
+			return m_num.toBinary();
+		}
 
 		friend BigInt operator""_bi(const char* str);
 		friend inline std::ostream& operator<<(std::ostream& os, const BigFloat& num);
 		friend inline std::istream& operator>>(std::istream& is, BigFloat& num);
 
-		friend BigInt power(BigInt base, BigInt exponent);
+		// friend BigInt power(BigInt base, BigInt exponent)
+		// {	
+		// 	if (base == BigInt(-1)) {
+		// 		if (exponent.isEven())
+		// 			return 1;
+		// 		else return -1;
+		// 	}
+		// 	BigInt result = power(base.m_num, exponent.m_num);
+		// 	if (result != 0 && base.m_sign == BigInt::s_negative && exponent.isOdd())
+		// 		result.m_sign = BigInt::s_negative;
+		// 	return result;
+		// }
 
 		friend std::ostream& operator<<(std::ostream& os, const BigInt& num) {
 

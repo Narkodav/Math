@@ -4,51 +4,9 @@
 #include <concepts>
 #include <cmath>
 
-#include "Math/Tensors/TensorBinaryOps.h"
-#include "Math/Tensors/TensorUnaryOps.h"
+#include "Math/Tensors/TensorOps.h"
 
 namespace Math {
-
-	template<typename V>
-	concept VecExpr = (V::ShapeType::dims().size() == 1);
-
-	template<typename V, size_t size>
-	concept SizedVecExpr = (VecExpr<V> && V::ShapeType::dims()[0] == size);
-
-	template<typename V>
-	concept Vec1Expr = SizedVecExpr<V, 1>;
-
-	template<typename V>
-	concept Vec2Expr = SizedVecExpr<V, 2>;
-
-	template<typename V>
-	concept Vec3Expr = SizedVecExpr<V, 3>;
-
-	template<typename V>
-	concept Vec4Expr = SizedVecExpr<V, 4>;
-
-	template<typename M>
-	concept MatExpr = (M::ShapeType::dims().size() == 2);
-
-	template<typename M>
-	concept SquareMatExpr = (MatExpr<M> * M::ShapeType::dims()[0] == M::ShapeType::dims()[1]);
-
-	template<typename V, size_t size>
-	concept SizedSquareMatExpr = (SquareMatExpr<V> && V::ShapeType::dims()[0] == size);
-
-	template<typename M>
-	concept Mat1Expr = SizedSquareMatExpr<M, 1>;
-
-	template<typename M>
-	concept Mat2Expr = SizedSquareMatExpr<M, 2>;
-
-	template<typename M>
-	concept Mat3Expr = SizedSquareMatExpr<M, 3>;
-
-	template<typename M>
-	concept Mat4Expr = SizedSquareMatExpr<M, 4>;
-
-
     // Arithmetic operations
     template<typename L, typename R>
     constexpr auto operator+(const TensorExpression<L>& lhs, const TensorExpression<R>& rhs) {
@@ -76,33 +34,33 @@ namespace Math {
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator+=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator+=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs + rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator-=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator-=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs - rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator*=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator*=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs * rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator/=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator/=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs / rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator%=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator%=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs % rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     template<typename E>
@@ -116,28 +74,32 @@ namespace Math {
     }
 
     // Pre increment and decrement
-    template<typename E>
-    constexpr auto operator++(TensorWritableExpression<E>& expr) {
-        for(size_t i = 0; i < expr.size(); ++i) ++expr.derived().data()[i];
+    template<TensorAssignableExpressionConcept E>
+    constexpr auto operator++(TensorExpression<E>& expr) {
+        expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+            ++expr.derived().eval(i, std::forward<Indices>(idx)...);
+        });
         return expr.derived();
     }
 
-    template<typename E>
-    constexpr auto operator--(TensorWritableExpression<E>& expr) {
-        for(size_t i = 0; i < expr.size(); ++i) --expr.derived().data()[i];
+    template<TensorAssignableExpressionConcept E>
+    constexpr auto operator--(TensorExpression<E>& expr) {
+        expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+            --expr.derived().eval(i, std::forward<Indices>(idx)...);
+        });
         return expr.derived();
     }
 
     // Post increment and decrement
-    template<typename E>
-    constexpr auto operator++(TensorWritableExpression<E>& expr, int) {
+    template<TensorAssignableExpressionConcept E>
+    constexpr auto operator++(TensorExpression<E>& expr, int) {
         auto copy = expr.eval();
         ++expr;
         return copy;
     }
 
-    template<typename E>
-    constexpr auto operator--(TensorWritableExpression<E>& expr, int) {
+    template<TensorAssignableExpressionConcept E>
+    constexpr auto operator--(TensorExpression<E>& expr, int) {
         auto copy = expr.eval();
         --expr;
         return copy;
@@ -175,33 +137,33 @@ namespace Math {
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator&=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator&=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs & rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator|=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator|=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs | rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator^=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator^=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs ^ rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator<<=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator<<=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs << rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     template<typename L, typename R>
-    constexpr TensorWritableExpression<L>& operator>>=(TensorWritableExpression<L>& lhs, const TensorExpression<R>& rhs) {
+    constexpr decltype(auto) operator>>=(L&& lhs, const TensorExpression<R>& rhs) {
         lhs = lhs >> rhs;
-        return lhs;
+        return std::forward<L>(lhs);
     }
 
     // Logical operations
@@ -277,244 +239,244 @@ namespace Math {
 
     // Arithmetic scalar operations
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator+(const TensorExpression<L>& lhs, T rhs) {
-        return lhs + ScalarExprT<T, L>(rhs);
+    constexpr auto operator+(const TensorExpression<L>& lhs, const T& rhs) {
+        return lhs.derived() + ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator+(T lhs, const TensorExpression<R>& rhs) {
-        return ScalarExprT<T, R>(lhs) + rhs;
+    constexpr auto operator+(const T& lhs, const TensorExpression<R>& rhs) {
+        return ScalarExprT<T, R>(lhs) + rhs.derived();
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator+=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator+=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs + rhs;
         return lhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator-(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator-(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs - ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator-(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator-(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) - rhs;
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator-=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator-=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs - rhs;
         return lhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator*(const TensorExpression<L>& lhs, T rhs) {
-        return lhs * ScalarExprT<T, L>(rhs);
+    constexpr auto operator*(const TensorExpression<L>& lhs, const T& rhs) {
+        return lhs.derived() * ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator*(T lhs, const TensorExpression<R>& rhs) {
-        return ScalarExprT<T, R>(lhs) * rhs;
+    constexpr auto operator*(const T& lhs, const TensorExpression<R>& rhs) {
+        return ScalarExprT<T, R>(lhs) * rhs.derived();
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator*=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator*=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs * rhs;
         return lhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator/(const TensorExpression<L>& lhs, T rhs) {
-        return lhs / ScalarExprT<T, L>(rhs);
+    constexpr auto operator/(const TensorExpression<L>& lhs, const T& rhs) {
+        return lhs.derived() / ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator/(T lhs, const TensorExpression<R>& rhs) {
-        return ScalarExprT<T, R>(lhs) / rhs;
+    constexpr auto operator/(const T& lhs, const TensorExpression<R>& rhs) {
+        return ScalarExprT<T, R>(lhs) / rhs.derived();
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator/=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator/=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs / rhs;
         return lhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator%(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator%(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs % ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator%(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator%(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) % rhs;
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator%=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator%=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs % rhs;
         return lhs;
     }
 
     //Bitwise scalar operations
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator&(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator&(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs & ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator&(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator&(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) & rhs;
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator&=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator&=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs & rhs;
         return lhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator|(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator|(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs | ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator|(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator|(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) | rhs;
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator|=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator|=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs | rhs;
         return lhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator^(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator^(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs ^ ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator^(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator^(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) ^ rhs;
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator^=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator^=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs ^ rhs;
         return lhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator<<(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator<<(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs << ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator<<(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator<<(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) << rhs;
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator<<=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator<<=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs << rhs;
         return lhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator>>(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator>>(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs >> ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator>>(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator>>(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) >> rhs;
     }
 
-    template<typename L, ScalarArithmeticOperand T>
-    constexpr TensorWritableExpression<L>& operator>>=(TensorWritableExpression<L>& lhs, T rhs) {
+    template<TensorAssignableExpressionConcept L, ScalarArithmeticOperand T>
+    constexpr TensorExpression<L>& operator>>=(TensorExpression<L>& lhs, const T& rhs) {
         lhs = lhs >> rhs;
         return lhs;
     }
 
     // Logical scalar operations
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator&&(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator&&(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs && ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator&&(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator&&(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) && rhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator||(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator||(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs || ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator||(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator||(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) || rhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator==(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator==(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs == ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator==(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator==(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) == rhs;
     }
     
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator!=(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator!=(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs != ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator!=(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator!=(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) != rhs;
     }
     
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator<(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator<(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs < ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator<(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator<(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) < rhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator<=(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator<=(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs <= ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator<=(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator<=(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) <= rhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator>(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator>(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs > ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator>(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator>(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) > rhs;
     }
 
     template<typename L, ScalarArithmeticOperand T>
-    constexpr auto operator>=(const TensorExpression<L>& lhs, T rhs) {
+    constexpr auto operator>=(const TensorExpression<L>& lhs, const T& rhs) {
         return lhs >= ScalarExprT<T, L>(rhs);
     }
 
     template<ScalarArithmeticOperand T, typename R>
-    constexpr auto operator>=(T lhs, const TensorExpression<R>& rhs) {
+    constexpr auto operator>=(const T& lhs, const TensorExpression<R>& rhs) {
         return ScalarExprT<T, R>(lhs) >= rhs;
     }
 
@@ -524,15 +486,15 @@ namespace Math {
     constexpr Result dot(const TensorExpression<L>& lhs, const TensorExpression<R>& rhs) {
         Result result{};
         if(&lhs == &rhs) {
-            for(size_t i = 0; i < lhs.size(); ++i) {
-                auto val = lhs.eval(i, i);
+            lhs.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+                auto val = lhs.eval(i, std::forward<Indices>(idx)...);
                 result += val * val;
-            }
+            });
         }
         else {
-            for(size_t i = 0; i < lhs.size(); ++i) {
-                result += lhs.eval(i, i) * rhs.eval(i, i);
-            }
+            lhs.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+                result += lhs.eval(i, std::forward<Indices>(idx)...) * rhs.eval(i, std::forward<Indices>(idx)...);
+            });
         }
         return result;
     }
@@ -611,37 +573,47 @@ namespace Math {
     template<typename T>
     constexpr decltype(auto) sum(const TensorExpression<T>& expr) {
         typename T::ValueType result{};
-        for(size_t i = 0; i < expr.derived().size(); ++i) {
-            result += expr.eval(i, i);
-        }
+        expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+            result += expr.eval(i, std::forward<Indices>(idx)...);
+        });
         return result;
     }
 
     template<typename T>
     constexpr decltype(auto) product(const TensorExpression<T>& expr) {
-        typename T::ValueType result = 1;
-        for(size_t i = 0; i < expr.derived().size(); ++i) {
-            result *= expr.eval(i, i);
-        }
+        typename T::ValueType result{};
+        expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+            result *= expr.eval(i, std::forward<Indices>(idx)...);
+        });
         return result;
     }
 
     template<typename T>
     constexpr decltype(auto) min(const TensorExpression<T>& expr) {
-        auto min = std::numeric_limits<typename T::ValueType>::max();
-        for(size_t i = 0; i < expr.derived().size(); ++i) {
-            min = std::min(min, expr.eval(i, i));
-        }
+        typename T::ValueType min = std::numeric_limits<typename T::ValueType>::max();
+        expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+            min = std::min(min, expr.eval(i, std::forward<Indices>(idx)...));
+        });
         return min;
     }
 
     template<typename T>
     constexpr decltype(auto) max(const TensorExpression<T>& expr) {
-        auto max = std::numeric_limits<typename T::ValueType>::min();
-        for(size_t i = 0; i < expr.derived().size(); ++i) {
-            max = std::max(max, expr.eval(i, i));
-        }
+        typename T::ValueType max = std::numeric_limits<typename T::ValueType>::min();
+        expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+            max = std::max(max, expr.eval(i, std::forward<Indices>(idx)...));
+        });
         return max;
+    }
+
+    template<typename L, typename R>
+    constexpr decltype(auto) min(const TensorExpression<L>& lhs, const TensorExpression<R>& rhs) {
+        return TensorBinaryExpression<L, R, BinaryOpType::Min>(lhs.derived(), rhs.derived());
+    }
+
+    template<typename L, typename R>
+    constexpr decltype(auto) max(const TensorExpression<L>& lhs, const TensorExpression<R>& rhs) {
+        return TensorBinaryExpression<L, R, BinaryOpType::Max>(lhs.derived(), rhs.derived());
     }
 
     template<typename L, typename R>
@@ -664,11 +636,40 @@ namespace Math {
 
     template<typename T>
     constexpr decltype(auto) cos(const TensorExpression<T>& expr) {
-        return TensorUnaryExpression<T, UnaryOpType::Cos>(expr);
+        return TensorUnaryExpression<T, UnaryOpType::Cos>(expr.derived());
     }
 
     template<typename T>
     constexpr decltype(auto) sin(const TensorExpression<T>& expr) {
-        return TensorUnaryExpression<T, UnaryOpType::Sin>(expr);
+        return TensorUnaryExpression<T, UnaryOpType::Sin>(expr.derived());
     }
+
+    template<typename T>
+    constexpr decltype(auto) abs(const TensorExpression<T>& expr) {
+        return TensorUnaryExpression<T, UnaryOpType::Abs>(expr.derived());
+    }
+
+    template<typename T>
+    constexpr decltype(auto) all(const TensorExpression<T>& expr) {
+        bool result = true;
+        expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+            result = result && expr.eval(i, std::forward<Indices>(idx)...);
+        });
+        return result;
+    }
+
+    template<typename T>
+    constexpr decltype(auto) none(const TensorExpression<T>& expr) {
+        bool result = false;
+        expr.forEach([&]<typename... Indices>(size_t i, Indices&&... idx){
+            result = result || expr.eval(i, std::forward<Indices>(idx)...);
+        });
+        return !result;
+    }
+
+    template<typename L, typename R, typename T>
+    constexpr decltype(auto) epsilonEqual(const TensorExpression<L>& lhs, const TensorExpression<R>& rhs, T&& epsilon) {
+        return Math::abs(lhs - rhs) < epsilon;
+    }
+    
 }

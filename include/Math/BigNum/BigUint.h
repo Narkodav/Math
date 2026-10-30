@@ -11,12 +11,10 @@
 #include "Math/BigNum/BigNumArithmetic.h"
 
 namespace Math::BigNum {
-	class BigInt;
 	class BigFloat;
 
 	class BigUint
 	{
-		friend class BigInt;
 		friend class BigFloat;
 	public:
 		using StorageType = uint64_t;
@@ -45,9 +43,6 @@ namespace Math::BigNum {
 		}
 
 		BigUint(BigUint&& other) noexcept : m_num(std::exchange(other.m_num, std::vector<StorageType>())) {};
-
-		BigUint(const BigInt& other) noexcept;
-		BigUint(BigInt&& other) noexcept;
 
 		template<typename T>
 		BigUint(T&& other) noexcept requires (std::is_unsigned_v<T> && (sizeof(T) <= sizeof(StorageType)))
@@ -83,9 +78,6 @@ namespace Math::BigNum {
 				m_num = std::exchange(other.m_num, std::vector<StorageType>());
 			return *this;
 		}
-
-		BigUint& operator=(const BigInt& other) noexcept;
-		BigUint& operator=(BigInt&& other) noexcept;
 
 		template<typename T>
 		BigUint& operator=(T&& other) noexcept requires (std::is_unsigned_v<T> && (sizeof(T) <= sizeof(StorageType)))
@@ -364,18 +356,85 @@ namespace Math::BigNum {
 			return result;
 		}
 
-		void eraseMSBs(size_t bitAmount) noexcept;
+		void eraseMSBs(size_t bitAmount) noexcept
+		{
+			StorageType msb = m_num.back();
+			size_t lastAmount = 0;
+			while (msb != 0)
+			{
+				msb >>= 1;
+				lastAmount++;
+			}
+
+			if (bitAmount < lastAmount)
+			{
+				size_t shift = s_storageSize - lastAmount + bitAmount;
+				m_num.back() <<= shift;
+				m_num.back() >>= shift;
+			}
+			else if(bitAmount == lastAmount)
+				m_num.pop_back();
+			else
+			{
+				size_t limbsToErase = (bitAmount - lastAmount) / s_storageSize;
+				size_t rightBitsToErase = (bitAmount - lastAmount) % s_storageSize;
+
+				m_num.erase(m_num.end() - limbsToErase - 1, m_num.end());
+				m_num.back() <<= rightBitsToErase;
+				m_num.back() >>= rightBitsToErase;
+			}	
+		}
 
 		std::vector<StorageType>& raw() noexcept { return m_num; };
 
 		const std::vector<StorageType>& raw() const noexcept { return m_num; };
 
-		std::string toBinary() const;
+		std::string toBinary() const
+		{
+			std::string binary;
+			StorageType msbMask = StorageType(1) << (s_storageSize - 1);
+			for (size_t i = m_num.size() - 1; i != std::numeric_limits<size_t>::max(); i--)
+			{
+				for (size_t j = 0; j < s_storageSize; j++)
+					binary.push_back((m_num[i] << j) & msbMask ? '1' : '0');
+			}
+
+			size_t toErase;
+
+			for (toErase = 0; toErase < binary.size(); toErase++)
+			{
+				if (binary[toErase] != '0')
+					break;
+			}
+			binary.erase(0, toErase);
+			return binary;
+		}
 
 		friend BigUint operator""_bui(const char* str);
 	};
 
-	BigUint power(BigUint base, BigUint exponent);
+	BigUint power(BigUint base, BigUint exponent)
+	{
+		if (exponent < BigUint::StorageType(0))
+			throw std::invalid_argument("Negative exponent is not supported on BigUints, use BigFloats instead");
+		if (exponent == BigUint::StorageType(0)) {
+			return BigUint(BigUint::StorageType(1));
+		}
+		if (exponent == BigUint::StorageType(0)) return BigUint(BigUint::StorageType(1));
+		if (base == BigUint::StorageType(0) || base == BigUint::StorageType(1)) return base;
+
+		BigUint result = BigUint::StorageType(1);
+
+		while (exponent.raw().size() != 0) {
+			if (exponent.raw().front() & 1) {
+				result = result * base;  // Multiply if bit is set
+			}
+			base = base * base;  // Square the base
+			exponent >>= 1;       // Move to next bit
+		}
+
+		return result;
+	}
 }
 
 inline Math::BigNum::BigUint operator""_bui(const char* str) {
